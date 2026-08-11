@@ -17,7 +17,30 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright browser and system dependencies
+        run: npx playwright@1.61.0 install --with-deps chromium
+
+      - name: Build application
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Verify JAR exists
+        run: |
+          ls -lah my-app-web/target/
+          test -f my-app-web/target/my-app-web.jar
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -29,9 +52,8 @@ jobs:
       - name: Build SCS image
         run: |
           docker build \
-            -f my-app-web/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sgc-test \
-            .
+            my-app-web
 
       - name: Push SCS image
         run: |
